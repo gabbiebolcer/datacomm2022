@@ -1,0 +1,65 @@
+---
+title: "BRFSS"
+author: "Gabbie Bolcer"
+date: "4/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(haven)
+library(survey)
+```
+
+Create the dataframe: 
+```{r}
+# create the dataframe 
+data_2020 <- read_xpt("LLCP2020.xpt")
+
+```
+
+
+Change the column names to not have underscores and adjust something? for survey package
+```{r}
+names(data_2020) <- gsub("\\_", "", names(data_2020))
+options(survey.lonely.psu = "adjust")
+```
+
+
+THE FOLLOWING IS AN EXAMPLE FROM DR. CHECK!
+```{r}
+minnesota_rows <- which(data_2020[, "STATE"] == 27)
+minnesota_data <- data_2020[minnesota_rows,]
+
+
+brfssdsgn <- svydesign( id=~1,
+                        strata = ~STSTR,
+                        weights = ~LLCPWT,
+                        data = minnesota_data)
+```
+
+
+```{r}
+
+svymean(~factor(minnesota_data$HLTHPLN1), brfssdsgn, na.rm = TRUE)
+
+lpm <- svyglm((minnesota_data$HLTHPLN1==1) ~ 1 + as.factor(INCOMG), design = brfssdsgn, 
+              na.action=na.exclude)
+              
+
+```
+
+```{r}
+health_coverage <- minnesota_data[, "HLTHPLN1"] ==1
+w <- minnesota_data[, "LLCPWT"]
+total_coverage <- sum(health_coverage*w)
+coverage_rate <- total_coverage / sum(w)
+
+lmp_manual <- glm(minnesota_data$HLTHPLN1==1 ~ 1 + as.factor(minnesota_data$INCOMG),
+                  data = minnesota_data,
+                  weights = LLCPWT/sum(LLCPWT)) #note: weights must sum to 1
+summary(lmp_manual)
+```
+
+END EXAMPLE CODE
